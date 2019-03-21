@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text;
 using System.Collections.Generic;
 using System.Linq;
 using System.Web;
@@ -288,7 +289,15 @@ namespace Prerequisite_Checker_1._0._1
         protected void btn2Exec_Click(object sender, EventArgs e)
         {
             string[] output = getSubjReq(tb2Subj.Text);
-            lbl2RetVal.Text = output.ToString();
+            StringBuilder outStr = new StringBuilder();
+            outStr.Append("{");
+            foreach (string item in output)
+            {
+                outStr.Append(item).Append(",");
+            }
+            outStr.Length--;    //remove last character, by changing index position
+            outStr.Append("}");
+            lbl2RetVal.Text = outStr.ToString();
             lbl2ArraySize.Text = output.Length.ToString();
         }
 
@@ -301,7 +310,20 @@ namespace Prerequisite_Checker_1._0._1
         protected void btn3bExec_Click(object sender, EventArgs e)
         {
             string[][] output = GetStudCurArr();
-            lbl2RetVal.Text = output.ToString();
+            StringBuilder outStr = new StringBuilder();
+            outStr.Append("{{");
+            foreach (string[] dimension in output)
+            {
+                foreach (string item in dimension)
+                {
+                    outStr.Append(item).Append(",");
+                }
+                outStr.Length--;
+                outStr.Append("},{");
+            }
+            outStr.Length = outStr.Length - 2;    //remove last character, by changing index position
+            outStr.Append("}");
+            lbl2RetVal.Text = outStr.ToString();
             lbl3bArrSize.Text = "["+output.Length.ToString()+","+output[0].Length.ToString()+"]";
         }
 
