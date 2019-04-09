@@ -31,10 +31,54 @@ namespace Prerequisite_Checker_1._0._1
             return curUsername;
         }
 
+
+
+
         /////////////////////////////////////////////////////////////
         //note: "lblErr1" and etc is just for debuggging purposes
 
-        // -1 returned if error  (under construction)
+        /// <summary>
+        ///     returns db_name of curriculum of current student
+        /// </summary>
+        /// <returns>
+        ///     string, the dbname itself
+        /// </returns>
+        public String getCurDBName()
+        {
+            try
+            {
+                conn.Open();
+                SqlDataAdapter dataAdapter = new SqlDataAdapter("SELECT [Curriculum] FROM [login] WHERE [Username] = \'" + curUsername + "\'", conn);
+                //SqlDataAdapter dataAdapter = new SqlDataAdapter("SELECT * FROM [login] WHERE [Username] = \'adminako\'", conn);
+                DataTable datatable = new DataTable();
+                dataAdapter.Fill(datatable);
+                String cur_name = "";
+                foreach (DataRow row in datatable.Rows)
+                {
+                    cur_name = row["Curriculum"].ToString();
+                    break;
+                }
+                ////------------
+                //2nd command
+                ////------------
+                dataAdapter = new SqlDataAdapter("SELECT [DB Table Name] FROM [curriculum_names] WHERE [Curriculum Name] = \'" + cur_name + "\'", conn);
+                datatable = new DataTable();
+                dataAdapter.Fill(datatable);
+                String db_name = "";
+                foreach (DataRow row in datatable.Rows)
+                {
+                    db_name = row["DB Table Name"].ToString();
+                    break;
+                }
+                return db_name;
+            }
+            finally
+            {
+                conn.Close();
+            }
+        }
+
+
         /// <summary>
         /// 1. getSubjStatus
         /// </summary>
@@ -45,36 +89,45 @@ namespace Prerequisite_Checker_1._0._1
         /// </returns>
         public int getSubjStatus(string Subj)
         {
-            return -1;
+            SqlDataAdapter dataAdapter = new SqlDataAdapter();
+            SqlCommand load;
+            DataTable dt;
+            string commandText;
+
+
             try
             {
                 conn.Open();
-                SqlCommand dataGet = new SqlCommand("SELECT @col_name FROM Student_Info WHERE EntryID = @id", conn);
-                //dataGet.Parameters.AddWithValue("@id", IDTB.Text);
+                commandText = "SELECT "+Subj+" " +
+                                     "FROM samp_cur_student_info WHERE Username= \'"+ curUsername+"\'";
+                load = new SqlCommand(commandText, conn);
+                //////////////////load.Parameters.AddWithValue("@col_name", Subj);
+                //////////////////load.Parameters.AddWithValue("@id", curUsername);
 
-                SqlDataReader answers = dataGet.ExecuteReader();
-                if (answers.Read())
+
+                dataAdapter.SelectCommand = load;
+                dt = new DataTable();
+                dataAdapter.Fill(dt);
+                int output = -1;
+                foreach (DataRow row in dt.Rows)
                 {
-                    //NameTB.Text = answers.GetValue(0).ToString();
-                    //AddresssTB.Text = answers.GetValue(1).ToString();
-
-                    //Label7.Text = "Success.";
+                    String result = row[Subj].ToString();
+                    Int32.TryParse(result, out output);
                 }
-                else
-                {
-                    //Label7.Text = "ERROR: ID not found.";
-                }
-
-                ///////////////////////////////////////////
-                lblErr1.Text = "\"SUCCESS\" from getSubjStatus.";
-                lblErr2.Text = "-";
-                lblCurTable.Text = tbTableName.Text;
-                curTableName = tbTableName.Text;
+                return output;
             }
             catch (SqlException exception)
             {
-                lblErr1.Text = "latest error from getSubjStatus:";
+                lblErr1.Text = "latest error from getSubjStatus: [SQL Exception]";
                 lblErr2.Text = exception.ToString();
+                //MessageBox.Show(exception.ToString());
+
+                return -1;  //error
+            }
+            catch (Exception e)
+            {
+                lblErr1.Text = "latest error from getSubjStatus:";
+                lblErr2.Text = e.ToString();
                 //MessageBox.Show(exception.ToString());
 
                 return -1;  //error
@@ -86,32 +139,47 @@ namespace Prerequisite_Checker_1._0._1
             }
         }
 
-
+        /// <summary>
+        /// 2. getSubjReq
+        /// </summary>
+        /// <param name="Subj">
+        ///     student subject
+        /// </param>
+        /// <returns>
+        ///     A 3-element string[]. 1st is hard pre-req, 2nd is soft pre-req, 3rd is co-req.
+        ///     Each subject in an element is comma separated (or "as is" as database)
+        /// </returns>
         public string[] getSubjReq(string Subj)
-        {
-            return new string[] { "one", "two", "three" };
-        }
-
-
-        public DataTable GetStudCur()
         {
             try
             {
+                String db_name = getCurDBName();
                 conn.Open();
-                SqlDataAdapter dataAdapter = new SqlDataAdapter("select TABLE_NAME from information_schema.tables", conn);
+                ////------------
+                //3rd command  (after getCurDBName() )
+                ////------------
+                SqlDataAdapter dataAdapter = new SqlDataAdapter("SELECT [Hard Prerequisites],[Soft Prerequisites],[Co-requisites] FROM " +
+                    db_name + " WHERE [Course Code] = \'"+Subj+"\'", conn);
                 DataTable datatable = new DataTable();
                 dataAdapter.Fill(datatable);
-                return datatable;
-                gvTableList.DataSource = datatable;
-                gvTableList.DataBind();
+                if (datatable.Rows.Count >= 1)
+                {
+                    var stringArr = datatable.Rows[0].ItemArray.Select(x => x.ToString()).ToArray();
+                    return stringArr;
+                } else
+                {
+                    lblErr1.Text = "latest error from getSubjReq:";
+                    lblErr2.Text = "no data from SQL (0 rows)";
+                    return null;
+                }
+            }
+            catch (SqlException exception)
+            {
+                lblErr1.Text = "latest error from getSubjReq:";
+                lblErr2.Text = exception.ToString();
+                //MessageBox.Show(exception.ToString());
 
-
-                SqlDataAdapter dataAdapter2 = new SqlDataAdapter("select * from " + curTableName, conn);
-                DataTable datatable2 = new DataTable();
-                dataAdapter2.Fill(datatable2);
-                gv1.DataSource = datatable2;
-                gv1.DataBind();
-                lblCurTable.Text = curTableName;
+                return null;  //error
             }
             finally
             {
@@ -119,10 +187,54 @@ namespace Prerequisite_Checker_1._0._1
             }
         }
 
+        /// <summary>
+        /// 3. GetStudCur
+        /// </summary>
+        /// <returns>
+        ///     DataTable of curriculum of current student
+        /// </returns>
+        public DataTable GetStudCur()
+        {
+            try
+            {
+                String db_name = getCurDBName();
+                conn.Open();
+                ////------------
+                //3rd command  (after getCurDBName() )
+                ////------------
+                SqlDataAdapter dataAdapter = new SqlDataAdapter("SELECT * FROM "+db_name, conn);
+                DataTable datatable = new DataTable();
+                dataAdapter.Fill(datatable);
+                return datatable;
+            }
+            finally
+            {
+                conn.Close();
+            }
+        }
 
+        /// <summary>
+        /// 3b. GetStudCurArr
+        /// </summary>
+        /// <returns>
+        ///     String[][] version (of #3) of curriculum of current student
+        /// </returns>
         public string[][] GetStudCurArr()
         {
-            return new string[][] {new string[] { "1-1", "1-2" }, new string[] { "2-1", "2-2" } };
+            DataTable datatable = GetStudCur();
+            string[][] output = new string[datatable.Rows.Count][];
+            int idx = 0;
+            foreach (DataRow row in datatable.Rows)
+            {
+                var stringArr = datatable.Rows[idx].ItemArray.Select(x => x.ToString()).ToArray();
+                output[idx] = stringArr;
+                idx++;
+            }
+            //var stringArr = datatable.Rows[0].ItemArray.Select(x => x.ToString()).ToArray();
+            return output;
+
+
+            //return new string[][] { new string[] { "1-1", "1-2" }, stringArr };// new string[] { "2-1", "2-2" } };
         }
 
 
@@ -323,7 +435,7 @@ namespace Prerequisite_Checker_1._0._1
             }
             outStr.Length = outStr.Length - 2;    //remove last character, by changing index position
             outStr.Append("}");
-            lbl2RetVal.Text = outStr.ToString();
+            lbl3bRetVal.Text = outStr.ToString();
             lbl3bArrSize.Text = "["+output.Length.ToString()+","+output[0].Length.ToString()+"]";
         }
 
