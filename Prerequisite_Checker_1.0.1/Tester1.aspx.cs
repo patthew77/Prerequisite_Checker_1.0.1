@@ -35,7 +35,134 @@ namespace Prerequisite_Checker_1._0._1
 
 
         /////////////////////////////////////////////////////////////
-        //note: "lblErr1" and etc is just for debuggging purposes
+
+
+
+        /// <summary>
+        /// N1. canTake  ****NEW parameter "sstudInfoDB added"
+        /// </summary>
+        /// <param name="subjName">(string) subject name</param>
+        /// <param name="studName">(string) student name</param>
+        /// <param name="curDbName">(string) database name of curriculum</param>
+        /// <returns>2D string array  (actually string[4][?] ):
+        /// output[0][] =  hard pre-reqs still needed
+        /// output[1][] =  soft pre-reqs still needed
+        /// output[2][] =  co-reqs still needed
+        /// output[3][] =  any of the requisites not found in student info is placed here.
+        /// </returns>
+        string[][] canTake(string subjName, string studName, string curDbName, string studInfoDbName)
+        {
+            try
+            {
+                conn.Open();
+                
+                SqlDataAdapter dataAdapter = new SqlDataAdapter("SELECT [Hard Prerequisites],[Soft Prerequisites],[Co - requisites]"+
+                    " FROM  ["+curDbName+ "]  WHERE [Course Code] = \'" + subjName + "\'", conn);
+                DataTable datatable = new DataTable();
+                dataAdapter.Fill(datatable);
+                DataRowCollection dRows = datatable.Rows;
+                //////
+                if (dRows.Count >= 1)
+                {
+                    if(dRows.Count >= 2)
+                    {
+                        lblErr13.Text = "canTake--WARNING: "+ dRows.Count+ "entries found in SQL DB (w/c is >1).";
+                    }
+                    /////////////
+                    List<string>[] sets = new List<string>[4];
+                    sets[3] = new List<string>();   //init here, since not initialize in for loop later
+                    /////
+                    List<int>[] status = new List<int>[3];
+                    //////////////////
+                    //////////////////
+                    string curTxt;
+                    string[] curReqs;
+                    DataTable dt;
+                    lblErr13.Text = "";
+                    bool isFound;
+                    /////
+                    for (int lsi=0; lsi<3; lsi++)
+                    {
+                        sets[lsi] = new List<string>(); //just to initialize object
+                        status[lsi] = new List<int>(); //just to initialize object
+                        ///
+                        curTxt = dRows[0][lsi].ToString();      //assumes in DataRow retured:  0=hard,1=soft,2=co
+                        curReqs = curTxt.Split(',');
+                        /////
+                        foreach (string req in curReqs)
+                        {
+                            isFound = false;
+                            dt = new DataTable();
+                            try
+                            {
+                                dataAdapter = new SqlDataAdapter("SELECT [" + req + "] FROM [" + studInfoDbName +
+                                    "] WHERE   [Username] = " + studName, conn);
+                                /////
+
+                                dataAdapter.Fill(dt);
+                                if (dt.Rows.Count >= 1)
+                                {
+                                    sets[lsi].Add(req);
+                                    status[lsi].Add(Convert.ToInt32(dt.Rows[0][req].ToString()));
+                                    // ^^ add the 1st result only
+                                    isFound = true;
+                                }
+                            }
+                            catch (SqlException sqle)
+                            {
+                                lblErr13.Text += "[" + req + "] not found in stud_info  |  ";
+                                lblErr14.Text = sqle.ToString();
+                            }
+                            /////
+                            if (!isFound)
+                            {
+                                sets[3].Add(req);
+                            }
+                        }
+                        lblErr13.Text += " --||||-- ";
+                    }
+                    //TODO: status code  later. 
+
+                    return new string[][] { sets[0].ToArray(), sets[1].ToArray(), sets[2].ToArray(), sets[3].ToArray() };
+                } else
+                {
+                    lblErr11.Text = "canTake:  no entry found in SQL DB.";
+                    lblErr12.Text = "-";
+                    lblErr13.Text = "-";
+                    lblErr14.Text = "-";
+                    ////////////
+                    return new string[][] { new string[] {}, new string[] {}, new string[] {}, new string[] { subjName } };                    
+                }
+                
+            }
+            catch (SqlException exception)
+            {
+                lblErr1.Text = "latest error from canTake:";
+                lblErr2.Text = exception.ToString();
+                return null;  //error
+            }
+            finally
+            {
+                conn.Close();
+            }
+
+            /*
+            lblErr11.Text = "canTake - to be implemented later.";
+            return new string[][] { new string[] { "1-1", "1-2" }, new string[] { "2-1", "2-2" }, new string[] { "3-1", "3-2" }, new string[] { "4-1", "4-2" }, new string[] { "5-1", "5-2" } };
+            */
+        }
+
+
+        void updateDB(string studName, string curDbName, string studInfoDbName)
+        {
+            //code later
+            lblErr11.Text = "updateDB - to be implemented later.";
+        }
+
+
+        /////////////////////////////////////////////////////////////////////
+        // note: "lblErr1" and etc is just for debuggging purposes
+        ///old batch 
 
         /// <summary>
         ///     returns db_name of curriculum of current student
@@ -119,7 +246,8 @@ namespace Prerequisite_Checker_1._0._1
             catch (SqlException exception)
             {
                 lblErr1.Text = "latest error from getSubjStatus: [SQL Exception]";
-                lblErr2.Text = exception.ToString();
+                lblErr2.Text += "==========="+exception.ToString();
+                
                 //MessageBox.Show(exception.ToString());
 
                 return -1;  //error
@@ -449,5 +577,112 @@ namespace Prerequisite_Checker_1._0._1
         {
             lbl5StudName.Text = getStudName();
         }
+        
+        /////// next batch
+
+        protected void btnN1Exec_Click(object sender, EventArgs e)
+        {
+            string[][] output = canTake(tbN1Subj.Text, tbN1StudName.Text, tbN1CurDB.Text, tbN1StudInfoDbName.Text);
+            if(output == null)
+            {
+                lblN1Rtn0.Text = "Error: NULL returned from Execute.";
+                return;
+            }
+            /////////////////////////////////////////////////////////
+            /////////////////////////////////////////////////////////
+            StringBuilder outStr = new StringBuilder();
+            for (int i = 0; i < output.Length; i++)
+            {
+                if (i < 4)
+                {
+                    outStr.Append("{");
+                    foreach (string item in output[i])
+                    {
+                        outStr.Append(item).Append(",");
+                    }
+                    outStr.Length--;
+                    outStr.Append("}");
+                    switch (i)
+                    {
+                        case 0:
+                            lblN1Rtn0.Text = outStr.ToString();
+                            break;
+
+                        case 1:
+                            lblN1Rtn1.Text = outStr.ToString();
+                            break;
+
+                        case 2:
+                            lblN1Rtn2.Text = outStr.ToString();
+                            break;
+
+                        case 3:
+                            lblN1Rtn3.Text = outStr.ToString();
+                            break;
+                    }
+                    outStr.Clear();
+                }
+                else  //i>=4
+                {
+                    if (i == 4)
+                    {
+                        outStr.Append("{{");
+                    }
+                    foreach (string item in output[i])
+                    {
+                        outStr.Append(item).Append(",");
+                    }
+                    outStr.Length--;
+                    outStr.Append("},{");
+                    ////////////
+                    if(i==output.Length - 1)
+                    {
+                        outStr.Length = outStr.Length - 2;    //remove last character, by changing index position
+                        outStr.Append("}");
+                        lblN1RtnMore.Text = outStr.ToString();
+                    }
+                }
+            }
+            ////////////////////////////////////////////
+            lblN1RtnArrSize.Text = "[" + output.Length.ToString() + ", (output[0]:) " + output[0].Length.ToString() + "]";
+        }
+
+        protected void btnN2Exec_Click(object sender, EventArgs e)
+        {
+            updateDB(tbN2StudName.Text, tbN2CurDB.Text, tbN2StudInfoDbName.Text);
+            lblErr14.Text = "btnN2Exec_Click - Executed.";
+        }
+
+        protected void btnN2View_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                conn.Open();
+                SqlDataAdapter dataAdapter = new SqlDataAdapter("SELECT * FROM " + tbN2StudInfoDbName.Text, conn);
+                DataTable datatable = new DataTable();
+                dataAdapter.Fill(datatable);
+                gvN2.DataSource = datatable;
+                gvN2.DataBind();
+
+                lblErr11.Text = "\"SUCCESS\" from btnN2View_Click.";
+                lblErr12.Text = "-";
+                lblCurTable.Text = tbTableName.Text;
+                curTableName = tbTableName.Text;
+            }
+            catch (SqlException exception)
+            {
+                lblErr11.Text = "latest error from btnN2View_Click:";
+                lblErr12.Text = exception.ToString();
+                //MessageBox.Show(exception.ToString());
+            }
+            finally
+            {
+                conn.Close();
+                //Label5.Text = "conn_closed";
+            }
+        }
+
+        
+
     }
 }

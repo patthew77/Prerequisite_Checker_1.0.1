@@ -15,6 +15,81 @@
     <form id="form2" runat="server">
         &lt;&lt; Debug/Test Page &gt;&gt;<br />
         <br />
+        1. string[][] canTake<br />
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Subject: (string):&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <asp:TextBox ID="tbN1Subj" runat="server"></asp:TextBox>
+        <br />
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Student Name: (string):&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <asp:TextBox ID="tbN1StudName" runat="server"></asp:TextBox>
+        <br />
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; curDbName: (string):&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <asp:TextBox ID="tbN1CurDB" runat="server">2015_cur</asp:TextBox>
+        <br />
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; studInfo Db Name: (string): &nbsp;&nbsp;&nbsp;
+        <asp:TextBox ID="tbN1StudInfoDbName" runat="server">samp_cur_student_info</asp:TextBox>
+        <br />
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -----------------------------------------------------<br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Return Value: (string[0]):&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <asp:Label ID="lblN1Rtn0" runat="server" Text="-"></asp:Label>
+        <br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Return Value: (string[1]):&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <asp:Label ID="lblN1Rtn1" runat="server" Text="-"></asp:Label>
+        <br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Return Value: (string[2]):&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <asp:Label ID="lblN1Rtn2" runat="server" Text="-"></asp:Label>
+        <br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Return Value: (string[3]):&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <asp:Label ID="lblN1Rtn3" runat="server" Text="-"></asp:Label>
+        <br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Return Value: (string[+++]):&nbsp;&nbsp;&nbsp;&nbsp;
+        <asp:Label ID="lblN1RtnMore" runat="server" Text="-"></asp:Label>
+        <br />
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Array_Size:&nbsp; (to confirm):&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <asp:Label ID="lblN1RtnArrSize" runat="server" Text="-"></asp:Label>
+        <br />
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <asp:Button ID="btnN1Exec" runat="server" OnClick="btnN1Exec_Click" Text="Execute" />
+        <br />
+        <br />
+        <br />
+        <br />
+        <br />
+        2. void updateDB<br />
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Student Name: (string):&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <asp:TextBox ID="tbN2StudName" runat="server"></asp:TextBox>
+        <br />
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; curDbName: (string):&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <asp:TextBox ID="tbN2CurDB" runat="server">2015_cur</asp:TextBox>
+        <br />
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; studInfo Db Name: (string): &nbsp;&nbsp;&nbsp;
+        <asp:TextBox ID="tbN2StudInfoDbName" runat="server">samp_cur_student_info</asp:TextBox>
+        <br />
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; -----------------------------------------------------<br />
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <asp:Button ID="btnN2Exec" runat="server" OnClick="btnN2Exec_Click" Text="Execute" />
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        <asp:Button ID="btnN2View" runat="server" OnClick="btnN2View_Click" Text="View DB" style="height: 26px" />
+        <br />
+        <asp:GridView ID="gvN2" runat="server">
+        </asp:GridView>
+        <br />
+        <br />
+        <br />
+        <br />
+        <br />
+        Error Message(s):<br />
+        <asp:Label ID="lblErr11" runat="server" Text="-"></asp:Label>
+        <br />
+        <asp:Label ID="lblErr12" runat="server" Text="-"></asp:Label>
+        <br />
+        <asp:Label ID="lblErr13" runat="server" Text="-"></asp:Label>
+        <br />
+        <asp:Label ID="lblErr14" runat="server" Text="-"></asp:Label>
+        <br />
+        <br />
+        <hr />
+        <hr />
+        <br />
         Current User: (username)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
         <asp:Label ID="lblCurUser" runat="server" Text="(unnamed)"></asp:Label>
         <br />
@@ -24,6 +99,8 @@
         <asp:Button ID="btnChangeUser" runat="server" OnClick="btnChangeUser_Click" Text="Change" />
         <br />
         <hr />
+        <br />
+        <br />
         <br />
         1. getSubjStatus<br />
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Subject: (string):&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
@@ -59,10 +136,13 @@
         3. getStudCur<br />
         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
         <asp:Button ID="btn3Exec" runat="server" OnClick="btn3Exec_Click" Text="Execute" />
-&nbsp;<div class="auto-style1">
+&nbsp;<br />
+        <div class="auto-style1">
             <asp:GridView ID="gv3Table" runat="server">
             </asp:GridView>
         </div>
+        <br />
+        <br />
         <br />
         <br />
         3b. getStudCurrArr<br />
@@ -108,12 +188,12 @@
         <asp:GridView ID="gvTableList" runat="server">
         </asp:GridView>
         <br />
-        <br />
+        <input id="Password1" type="password" /><br />
         <br />
         <asp:Label ID="Label1" runat="server" Text="View Which Table?"></asp:Label>
         &nbsp;
         <asp:TextBox ID="tbTableName" runat="server"></asp:TextBox>
-        &nbsp;
+        <%-- (comment line)  for tb password,  use TextMode="Password" --%>&nbsp;
         <asp:Button ID="btnGetTable" runat="server" Text="Get Table" OnClick="btnGetTable_Click" />
         <br />
         <br />
