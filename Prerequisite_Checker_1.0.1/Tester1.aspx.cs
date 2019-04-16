@@ -39,11 +39,12 @@ namespace Prerequisite_Checker_1._0._1
 
 
         /// <summary>
-        /// N1. canTake  ****NEW parameter "sstudInfoDB added"
+        /// N1. canTake  ****NEW parameter "studInfoDbName added"
         /// </summary>
         /// <param name="subjName">(string) subject name</param>
-        /// <param name="studName">(string) student name</param>
+        /// <param name="studName">(string) student name (ID Number)</param>
         /// <param name="curDbName">(string) database name of curriculum</param>
+        /// <param name="studInfoDbName">(string) database name of student info db</param>
         /// <returns>2D string array  (actually string[4][?] ):
         /// output[0][] =  hard pre-reqs still needed
         /// output[1][] =  soft pre-reqs still needed
@@ -56,7 +57,7 @@ namespace Prerequisite_Checker_1._0._1
             {
                 conn.Open();
                 
-                SqlDataAdapter dataAdapter = new SqlDataAdapter("SELECT [Hard Prerequisites],[Soft Prerequisites],[Co - requisites]"+
+                SqlDataAdapter dataAdapter = new SqlDataAdapter("SELECT [Hard Prerequisites],[Soft Prerequisites],[Co-requisites]"+
                     " FROM  ["+curDbName+ "]  WHERE [Course Code] = \'" + subjName + "\'", conn);
                 DataTable datatable = new DataTable();
                 dataAdapter.Fill(datatable);
@@ -79,6 +80,7 @@ namespace Prerequisite_Checker_1._0._1
                     string[] curReqs;
                     DataTable dt;
                     lblErr13.Text = "";
+                    lblErr14.Text = "";
                     bool isFound;
                     /////
                     for (int lsi=0; lsi<3; lsi++)
@@ -87,7 +89,7 @@ namespace Prerequisite_Checker_1._0._1
                         status[lsi] = new List<int>(); //just to initialize object
                         ///
                         curTxt = dRows[0][lsi].ToString();      //assumes in DataRow retured:  0=hard,1=soft,2=co
-                        curReqs = curTxt.Split(',');
+                        curReqs = curTxt.Split(new char[] { ',', ' ' },StringSplitOptions.RemoveEmptyEntries);      //assumes course codes have no spaces in between
                         /////
                         foreach (string req in curReqs)
                         {
@@ -121,8 +123,65 @@ namespace Prerequisite_Checker_1._0._1
                         }
                         lblErr13.Text += " --||||-- ";
                     }
-                    //TODO: status code  later. 
+                    //code that checks Status[]
+                    for (int lsi = 0; lsi < 3; lsi++)
+                    {
+                        for(int iii = 0; iii < sets[lsi].Count;)     //yes, there is no update portion in for loop
+                        {
+                            //recall:
+                            // 0 - can be taken
+                            // 1 - cannot be taken
+                            // -------------------
+                            // 2 - Failed
+                            // 3 - In Progress
+                            // 4 - Passed
+                            ///////////////////////////////
+                            switch (status[lsi][iii])
+                            {
+                                case 0:
+                                case 1:
+                                    iii++;  //manual increment //list retains its content, moving on to next item
+                                    break;  //retain (do nothing)
 
+                                case 2:
+                                case 3:
+                                    //retain only if HARD pre-req
+                                    if (lsi == 0)
+                                    {
+                                        iii++;  //manual increment 
+                                    } else
+                                    {
+                                        sets[lsi].RemoveAt(iii);    //remove element, don't increment iii.
+                                        status[lsi].RemoveAt(iii);
+                                    }
+                                    break;
+
+                                case 4:
+                                    //remove
+                                    sets[lsi].RemoveAt(iii);
+                                    status[lsi].RemoveAt(iii);
+                                    break;
+
+                                default:
+                                    //do nothing (ERROR ish)
+                                    lblErr14.Text += "canTake: Yo!, invalid status received. Status:" + status[lsi][iii] +
+                                        ";; subject:" + sets[lsi][iii];
+                                    iii++;  //manual increment (as  list is untouched)
+                                    break;
+                            }
+                        }
+                    }
+                    ///////////
+                    lblErr11.Text = "canTake:  SUCCESS.";
+                    lblErr12.Text = "-";
+                    if (lblErr13.Text.Length < 2)
+                    {
+                        lblErr13.Text = "-";
+                    }
+                    if (lblErr14.Text.Length < 2)
+                    {
+                        lblErr14.Text = "-";
+                    }
                     return new string[][] { sets[0].ToArray(), sets[1].ToArray(), sets[2].ToArray(), sets[3].ToArray() };
                 } else
                 {
@@ -137,8 +196,8 @@ namespace Prerequisite_Checker_1._0._1
             }
             catch (SqlException exception)
             {
-                lblErr1.Text = "latest error from canTake:";
-                lblErr2.Text = exception.ToString();
+                lblErr11.Text = "latest error from canTake:";
+                lblErr12.Text = exception.ToString();
                 return null;  //error
             }
             finally
@@ -147,16 +206,152 @@ namespace Prerequisite_Checker_1._0._1
             }
 
             /*
+             * // dummy output:
             lblErr11.Text = "canTake - to be implemented later.";
             return new string[][] { new string[] { "1-1", "1-2" }, new string[] { "2-1", "2-2" }, new string[] { "3-1", "3-2" }, new string[] { "4-1", "4-2" }, new string[] { "5-1", "5-2" } };
             */
         }
 
-
+        /// <summary>
+        /// N2. updateDB   (no return value) (update user-changed values before calling me to update can/can't take)
+        /// </summary>
+        /// <param name="studName">(string)  student name (ID Number)</param>
+        /// <param name="curDbName">(string) database name of curriculum</param>
+        /// <param name="studInfoDbName">(string) database name of student info db</param>
         void updateDB(string studName, string curDbName, string studInfoDbName)
         {
+            try
+            {
+                conn.Open();
+                //(extract current data from db, then  convert to C# more manageable format)
+                //1. extract & "load"
+                //a) subjects array
+                SqlDataAdapter dataAdapter = new SqlDataAdapter("SELECT column_name" + 
+                    " FROM information_schema.columns WHERE table_name = \'" + studInfoDbName + "\'", conn);
+                DataTable datatable = new DataTable();
+                dataAdapter.Fill(datatable);
+                if (datatable.Rows.Count < 2)
+                {
+                    lblErr11.Text = "updateDB -- ERROR: ["+studInfoDbName+"] has only "+ datatable.Rows.Count+ "columns!! (min is 2)";
+                    return;
+                }
+                string[] subjects = new string[datatable.Rows.Count];   //includes "username" column
+                int subjsIdx = 0;
+                foreach (DataRow row in datatable.Rows)
+                {
+                    subjects[subjsIdx] = row[0].ToString();
+                    subjsIdx++;
+                }
+                /* Outtake:
+                string[] subjects = new string[datatable.Rows.Count-1];
+                int subjsIdx = -1;  //-1 to remove "username" column
+                foreach (DataRow row in datatable.Rows)
+                {
+                    if(subjsIdx >= 0)
+                    {
+                        subjects[subjsIdx] = row[0].ToString();
+                    }
+                    subjsIdx++;
+                }*/
+                //lblErr12.Text = string.Join(",", subjects);     //debug
+
+                //b) statuses array
+                dataAdapter = new SqlDataAdapter("SELECT *" + " FROM  ["
+                    + studInfoDbName + "]  WHERE [Username] = \'" + studName + "\'", conn);
+                datatable = new DataTable();
+                dataAdapter.Fill(datatable);
+                if(datatable.Rows.Count < 1)
+                {
+                    lblErr11.Text = "updateDB -- ERROR: SQL Query returned 0 result.";
+                    return;
+                } else if (datatable.Rows.Count > 1)
+                {
+                    lblErr13.Text = "updateDB--WARNING: " + datatable.Rows.Count + "entries found in SQL DB (w/c is >1).";
+                }
+                //assumes only one entry of output will be there
+                int[] statuses = datatable.Rows[0].ItemArray.Select(x => Convert.ToInt32(x)).ToArray();   //includes "username" column
+                //Outtake: Array.Copy(statuses, 1, statuses, 0, statuses.Length - 1);    //remove ID number
+                //lblErr12.Text = string.Join(",", intArr.Select(i => i.ToString()).ToArray());     //debug
+
+                if (subjects.Length != statuses.Length)
+                {
+                    lblErr11.Text = "updateDB -- ERROR: unequal lengths?! (subjects="+ subjects.Length+
+                        "),(statuses="+ statuses.Length+")";
+                    return;
+                }
+
+                //(read data and change some of the values accordingly)
+                //2. read, cross-compare, change
+                ///////////////////////////////
+                //recall:
+                // 0 - can be taken
+                // 1 - cannot be taken
+                // -------------------
+                // 2 - Failed
+                // 3 - In Progress
+                // 4 - Passed
+                ///////////////////////////////
+                string[][] temp0;
+                //change only if value is 0 or 1
+                for(int i=1; i<subjects.Length; i++)    //start w/ i=1 to ignore "username" column
+                {
+                    if(statuses[i] <= 1)
+                    {
+                        conn.Close();   //so can call function below
+                        temp0 = canTake(subjects[i], studName, curDbName, studInfoDbName);
+                        conn.Open();
+                        if(temp0[0].Length == 0 && temp0[1].Length == 0 && temp0[2].Length == 0)
+                        {
+                            statuses[i] = 0;    //can be taken
+                        } else
+                        {
+                            statuses[i] = 1;    //cannot be taken
+                        }
+                        //////////
+                        if(temp0[3].Length > 0)
+                        {
+                            lblErr14.Text = "UpdateDB -- WARNING: Some prerequisites not in curriculum." +
+                                "[Subject:" + subjects[i] + "]," +
+                                "[temp0[3]: {" + string.Join(",", subjects) + "} ]" +
+                                " --|-- ";
+                        }
+                    }
+                }
+
+
+                //3. update values in db
+                if(subjects.Length > 1)         //i mean its pointless to replace if its just id number anyway
+                {
+                    StringBuilder cmdUpdate = new StringBuilder("UPDATE [" + studInfoDbName + "] SET ");
+                    for(int i=0; i<subjects.Length; i++)
+                    {
+                        cmdUpdate.Append(" [").Append(subjects[i]).Append("] = ")
+                            .Append(statuses[i]).Append(",");
+                    }
+                    cmdUpdate.Length--;
+                    cmdUpdate.Append(" WHERE [Username] = \'" + studName + "\'");
+                    /////
+                    string cmdFull = cmdUpdate.ToString();
+                    lblErr13.Text = cmdFull;
+                    SqlCommand edit = new SqlCommand(cmdFull, conn);
+                    edit.ExecuteNonQuery();
+                }
+
+                /////
+                lblErr11.Text = "updateDb -- has successfully reached end of function."
+            }
+            catch (SqlException exception)
+            {
+                lblErr11.Text = "latest error from updateDB:";
+                lblErr12.Text = exception.ToString();
+            }
+            finally
+            {
+                conn.Close();
+            }
+
             //code later
-            lblErr11.Text = "updateDB - to be implemented later.";
+            //lblErr11.Text = "updateDB - to be implemented later.";
         }
 
 
@@ -600,7 +795,10 @@ namespace Prerequisite_Checker_1._0._1
                     {
                         outStr.Append(item).Append(",");
                     }
-                    outStr.Length--;
+                    if (outStr.Length > 1)
+                    {
+                        outStr.Length--;
+                    }
                     outStr.Append("}");
                     switch (i)
                     {
@@ -644,7 +842,14 @@ namespace Prerequisite_Checker_1._0._1
                 }
             }
             ////////////////////////////////////////////
-            lblN1RtnArrSize.Text = "[" + output.Length.ToString() + ", (output[0]:) " + output[0].Length.ToString() + "]";
+            outStr = new StringBuilder("[" + output.Length.ToString() + ", (output[n]: ");
+            foreach (string[] strArr in output)
+            {
+                outStr.Append(strArr.Length.ToString()).Append(",");
+            }
+            outStr.Length--;
+            outStr.Append(") ]");
+            lblN1RtnArrSize.Text = outStr.ToString();
         }
 
         protected void btnN2Exec_Click(object sender, EventArgs e)
